@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 import { supabase } from './supabaseClient.ts';
-import { QuickActions } from './QuickActions.tsx';
+
 import { BottomNav, Tab } from './components/BottomNav.tsx';
 import { SideNav } from './components/SideNav.tsx';
 import { WalletView } from './components/WalletView.tsx';
@@ -21,6 +21,7 @@ import { SetupView } from './components/SetupView.tsx';
 import { GoalsView } from './components/GoalsView.tsx';
 import { GoalsSummary } from './components/GoalsSummary.tsx';
 import { GoalAmplifier } from './components/GoalAmplifier.tsx';
+import { LoginView } from './components/LoginView.tsx';
 import { DailyChallenge } from './utils/amplifier.ts';
 
 // --- Types ---
@@ -57,6 +58,23 @@ const App = () => {
 
   // Wallet Preload State
   const [walletPreload, setWalletPreload] = useState<DailyChallenge | null>(null);
+
+  // Auth State
+  const [session, setSession] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const fetchData = async () => {
     setState(prev => ({ ...prev, loading: true }));
@@ -132,12 +150,16 @@ const App = () => {
     return Math.round((curr / total) * 100);
   }, [state.goals]);
 
-  if (state.loading) return (
+  if (state.loading && session) return (
     <div className="h-screen w-full flex flex-col items-center justify-center gap-4 bg-slate-950">
       <Loader2 className="animate-spin text-cyan-400" size={48} />
       <span className="text-xs font-black tracking-[0.5em] text-slate-500">INIT_SYTEM_ANTIGRAVITY_v2</span>
     </div>
   );
+
+  if (!session) {
+    return <LoginView />
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-300 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
